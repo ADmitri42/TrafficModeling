@@ -136,11 +136,16 @@ class BaseRoad:
 
     def _remove_car(self, car_id: int):
         car = self._get_car(car_id)
-        try:
-            self._cars.remove(car)
-            return 1
-        except ValueError:
+        ind = list(map(lambda x: x[1], filter(lambda x: x[0].id == car_id, zip(self._cars, range(len(self._cars))))))
+        if len(ind) == 0:
             return 0
+        self._cars.pop(ind[0])
+        # return car[0]
+        # try:
+        #     self._cars.remove(car)
+        return 1
+        # except ValueError:
+        #     return 0
 
     def process_output(self, direction: int = 0):
         pass
@@ -190,10 +195,10 @@ class BaseRoad:
         self._cars.extend(self._new_cars)
         self._new_cars = []
 
-        n_cars = len(self._cars)
-        moved = ((self._history[-1] - self.render()) != 0).sum()/2
-        speed = moved/n_cars if n_cars > 0 else 0
-        self._stats.append((speed, self._road.shape[0]*self._road.shape[1], n_cars, moved))
+        n_cars = np.sum(self._road != 0)
+        moved = ((self._history[-1] - self.render()) != 0).sum() // 2
+        n_cars = np.max(n_cars, moved)
+        self._stats.append((self._road.shape[0]*self._road.shape[1], n_cars, moved))
         # print(2, type(self))
         return self._stats[-1]
 
@@ -203,10 +208,17 @@ class BaseRoad:
 
 class VoidGenerator(BaseRoad):
 
-    def __init__(self, p_new: int = 1, random_walk: bool = False, **kwargs):
+    def __init__(self, p_new: int = 1, random_walk: bool = False, p_rot: List = None, first_n: int = 0, **kwargs):
         super(VoidGenerator, self).__init__((1, 1), name=kwargs.get("name", "void"))
         self.p_new = p_new
         self.random_walk = random_walk
+        self.p_rot = p_rot if p_rot is not None else [.25, .25, .25, .25]
+        self.first_n = first_n
+
+    def add_output(self, output_road, direction: int = 0, index: int = 0):
+        direction = len(self._outputs)
+        output_road.add_input(self, index, direction)
+        self._outputs.append((output_road, index))
 
     def process_output(self, direction: int = 0):
 
@@ -218,7 +230,8 @@ class VoidGenerator(BaseRoad):
 
         car = self._cars.pop()
         if self.random_walk:
-            car.route = np.random.choice((0, 1, 2, 3), 20).tolist()
+            car.route = np.random.choice((0, 1, 2, 3), self.first_n, p=self.p_rot).tolist()
+            car.route.extend(np.random.choice((0, 1, 2, 3), 20).tolist())
 
         if self._outputs[direction][0].add_car(car, self._outputs[0][1]):
             # print("Crec")
@@ -234,8 +247,8 @@ class VoidGenerator(BaseRoad):
             self.process_output(i)
 
     def step(self, time_step=0):
-        self._stats.append((0, 0, 0, 0))
-        return 0, 0, 0, 0
+        self._stats.append((0, 0, 0))
+        return 0, 0, 0
 
 
 class Line(BaseRoad):
@@ -344,6 +357,31 @@ class LineWLight(Line):
             car.move(self)
 
         # super(Line, self).step(time_step)
+
+    def step(self, time_step=0) -> Tuple:
+        """
+        Complete evaluation and calculate speed
+        :param time_step:
+        :return:
+            tuple with speed, n_cells, n_cars, n_moved_cars
+        """
+        if self.shuffle:
+            np.random.shuffle(self._cars)
+
+        self._history.append(self.render())
+        self._road = self._next_state
+        self._next_state = self._road.copy()
+
+        self._cars.extend(self._new_cars)
+        self._new_cars = []
+
+        n_cars = np.sum(self._road != 0)
+        moved = ((self._history[-1][0] - self.render()[0]) != 0).sum()/2
+        n_cars = np.max(n_cars, moved)
+        # speed = moved/n_cars if n_cars > 0 else 0
+        self._stats.append((self._road.shape[0]*self._road.shape[1], n_cars, moved))
+        # print(2, type(self))
+        return self._stats[-1]
 
 
 class Crossroad(BaseRoad):
@@ -489,7 +527,7 @@ class Crossroad(BaseRoad):
 
     def step(self, time_step=0):
         super(Crossroad, self).step(time_step)
-        v1, v2, v3, v4 = self._stats[-1]
-        v2 -= 4
-        self._stats[-1] = (v1, v2, v3, v4)
+        v1, v2, v3 = self._stats[-1]
+        v1 -= 4
+        self._stats[-1] = (v1, v2, v3)
         return self._stats[-1]
