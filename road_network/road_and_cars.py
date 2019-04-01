@@ -197,7 +197,7 @@ class BaseRoad:
 
         n_cars = np.sum(self._road != 0)
         moved = ((self._history[-1] - self.render()) != 0).sum() // 2
-        n_cars = np.max(n_cars, moved)
+        # n_cars = np.max(n_cars, moved)
         self._stats.append((self._road.shape[0]*self._road.shape[1], n_cars, moved))
         # print(2, type(self))
         return self._stats[-1]
@@ -377,7 +377,7 @@ class LineWLight(Line):
 
         n_cars = np.sum(self._road != 0)
         moved = ((self._history[-1][0] - self.render()[0]) != 0).sum()/2
-        n_cars = np.max(n_cars, moved)
+        # n_cars = np.max(n_cars, moved)
         # speed = moved/n_cars if n_cars > 0 else 0
         self._stats.append((self._road.shape[0]*self._road.shape[1], n_cars, moved))
         # print(2, type(self))
