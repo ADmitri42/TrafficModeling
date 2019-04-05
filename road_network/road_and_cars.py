@@ -1,7 +1,7 @@
 from typing import List, Tuple
 import numpy as np
 
-
+MAX_WAITING_TIME = 3
 speeds = [np.array([0, 0]), np.array([-1, 0]), np.array([0, -1]), np.array([1, 0]), np.array([0, 1])]
 
 
@@ -17,18 +17,21 @@ class Car:
     route = []
     coords = np.array([0, 0])
     speed = speeds[0]
+    speed_code = 0
     to_output = 0
 
-    def __init__(self, route: List[int] = None, destination_id: int = -1):
+    def __init__(self, route: List[int] = None, destination_id: int = -1, rotate_in_case: bool = False):
         """
 
         :param route: list with no. of an output on every crossroad
         """
+        self.counter = 0
         self.id = len(CarManager.all_cars)
         CarManager.all_cars.append(self)
 
         self.route = route if route is not None else []
         self.destination = destination_id
+        self.rotate = rotate_in_case
 
     def position(self):
         """
@@ -45,9 +48,24 @@ class Car:
         :param new_speed: new speed
         """
         if type(new_speed) == int:
+            # self.speed_code = new_speed
             new_speed = speeds[new_speed]
         elif type(new_speed) != np.ndarray:
             new_speed = np.array(new_speed)
+
+        if np.sum(new_speed) < 0:
+            if np.sum(new_speed)*new_speed[0] == 0:
+                self.speed_code = 2
+            else:
+                self.speed_code = 1
+        elif np.sum(new_speed) > 0:
+            if np.sum(new_speed)*new_speed[0] == 0:
+                self.speed_code = 4
+            else:
+                self.speed_code = 3
+        else:
+            self.speed_code = 0
+
         self.speed = new_speed
 
     def get_next_destination(self):
@@ -67,19 +85,22 @@ class Car:
         Move a car on a trafic greed if possible
         :param road: road class on which moving
         """
-        try:
-            if road.is_empty(self.coords + self.speed):
-                road.set_state(self.coords, 0)
-                road.set_state(self.coords + self.speed, self.id)
+        if road.is_empty(self.coords + self.speed):
+            road.set_state(self.coords, 0)
+            road.set_state(self.coords + self.speed, self.id)
 
-                self.coords += self.speed
-        except IndexError:
-            pass
+            self.coords += self.speed
+        elif self.rotate and self.counter >= MAX_WAITING_TIME and type(road) == Crossroad:
+            next_speed = len(speeds) - 1 - (len(speeds) - self.speed_code)%(len(speeds) - 1)
+            self.set_speed(next_speed)
+            self.counter = 0
+        else:
+            self.counter += 1
 
 
 class BaseRoad:
 
-    def __init__(self, grid_size, shuffle: bool = True, name = None):
+    def __init__(self, grid_size, shuffle: bool = True, name=None):
         self._road = np.zeros(grid_size, dtype="int32")
         self._next_state = self._road.copy()
 
@@ -208,12 +229,18 @@ class BaseRoad:
 
 class VoidGenerator(BaseRoad):
 
-    def __init__(self, p_new: int = 1, random_walk: bool = False, p_rot: List = None, first_n: int = 0, **kwargs):
+    def __init__(self, p_new: int = 1,
+                 random_walk: bool = False,
+                 p_rot: List = None,
+                 first_n: int = 0,
+                 rotate_in_case: bool = False, **kwargs):
+
         super(VoidGenerator, self).__init__((1, 1), name=kwargs.get("name", "void"))
         self.p_new = p_new
         self.random_walk = random_walk
         self.p_rot = p_rot if p_rot is not None else [.25, .25, .25, .25]
         self.first_n = first_n
+        self.rotate = rotate_in_case
 
     def add_output(self, output_road, direction: int = 0, index: int = 0):
         direction = len(self._outputs)
@@ -226,7 +253,7 @@ class VoidGenerator(BaseRoad):
             return 1
 
         if len(self._cars) == 0:
-            self._cars.append(Car())
+            self._cars.append(Car(rotate_in_case=self.rotate))
 
         car = self._cars.pop()
         if self.random_walk:
