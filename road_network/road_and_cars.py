@@ -1,7 +1,7 @@
 from typing import List, Tuple
 import numpy as np
 
-MAX_WAITING_TIME = 3
+MAX_WAITING_TIME = 2
 speeds = [np.array([0, 0]), np.array([-1, 0]), np.array([0, -1]), np.array([1, 0]), np.array([0, 1])]
 
 
@@ -25,6 +25,7 @@ class Car:
 
         :param route: list with no. of an output on every crossroad
         """
+        self._hist = []
         self.counter = 0
         self.id = len(CarManager.all_cars)
         CarManager.all_cars.append(self)
@@ -42,31 +43,17 @@ class Car:
     def set_position(self, coords: np.ndarray):
         self.coords = coords
 
-    def set_speed(self, new_speed):
+    def set_speed(self, new_speed: int):
         """
         Change speed of a car
         :param new_speed: new speed
         """
-        if type(new_speed) == int:
-            # self.speed_code = new_speed
-            new_speed = speeds[new_speed]
-        elif type(new_speed) != np.ndarray:
-            new_speed = np.array(new_speed)
+        if type(new_speed) != int:
+            raise TypeError
 
-        if np.sum(new_speed) < 0:
-            if np.sum(new_speed)*new_speed[0] == 0:
-                self.speed_code = 2
-            else:
-                self.speed_code = 1
-        elif np.sum(new_speed) > 0:
-            if np.sum(new_speed)*new_speed[0] == 0:
-                self.speed_code = 4
-            else:
-                self.speed_code = 3
-        else:
-            self.speed_code = 0
+        self.speed_code = new_speed
 
-        self.speed = new_speed
+        self.speed = speeds[new_speed]
 
     def get_next_destination(self):
         if len(self.route) > 0:
@@ -85,17 +72,14 @@ class Car:
         Move a car on a trafic greed if possible
         :param road: road class on which moving
         """
-        if road.is_empty(self.coords + self.speed):
+        if road.is_empty(self.coords + self.speed) > 0:
             road.set_state(self.coords, 0)
             road.set_state(self.coords + self.speed, self.id)
-
             self.coords += self.speed
-        elif self.rotate and self.counter >= MAX_WAITING_TIME and type(road) == Crossroad:
-            next_speed = len(speeds) - 1 - (len(speeds) - self.speed_code)%(len(speeds) - 1)
-            self.set_speed(next_speed)
             self.counter = 0
         else:
             self.counter += 1
+        self._hist.append(self.speed_code)
 
 
 class BaseRoad:
@@ -184,7 +168,10 @@ class BaseRoad:
         return self._history[-depth:] + [self.render()]
 
     def is_empty(self, coords: np.ndarray):
-        return (self._road[coords[0], coords[1]] == 0) and (self._next_state[coords[0], coords[1]] == 0)
+        if 0 <= coords[0] < self._road.shape[0] and 0 <= coords[1] < self._road.shape[1]:
+            return int((self._road[coords[0], coords[1]] == 0) and (self._next_state[coords[0], coords[1]] == 0))
+        else:
+            return -1
 
     def _get_state(self, coords: np.ndarray):
         if coords.shape != (2,):
@@ -239,7 +226,8 @@ class VoidGenerator(BaseRoad):
         self.p_new = p_new
         self.random_walk = random_walk
         self.p_rot = p_rot if p_rot is not None else [.25, .25, .25, .25]
-        self.first_n = first_n
+        if type(self.p_rot[0]) != list:
+            self.p_rot = [self.p_rot]*first_n
         self.rotate = rotate_in_case
 
     def add_output(self, output_road, direction: int = 0, index: int = 0):
@@ -257,8 +245,10 @@ class VoidGenerator(BaseRoad):
 
         car = self._cars.pop()
         if self.random_walk:
-            car.route = np.random.choice((0, 1, 2, 3), self.first_n, p=self.p_rot).tolist()
-            car.route.extend(np.random.choice((0, 1, 2, 3), 20).tolist())
+            car.route = []
+            for p in self.p_rot:
+                car.route.extend(np.random.choice((0, 1, 2, 3), 1, p=p).tolist())
+            car.route.extend(np.random.choice((0, 1, 2, 3), 20-len(self.p_rot)).tolist())
 
         if self._outputs[direction][0].add_car(car, self._outputs[0][1]):
             # print("Crec")
@@ -461,6 +451,15 @@ class Crossroad(BaseRoad):
         car.set_position(coords)
         car.set_speed(speed)
         return super(Crossroad, self).add_car(car, direction)
+    
+    def is_empty(self, coords: np.ndarray):
+        if coords[0] == 0 and (coords[1] == 0 or coords[1] == self._road.shape[1]-1):
+            return -1
+        elif coords[1] == 0 and (coords[0] == 0 or coords[0] == self._road.shape[0]-1):
+            return -1
+        elif coords[1] == self._road.shape[1]-1 and coords[0] == self._road.shape[0]-1:
+            return -1
+        return super(Crossroad, self).is_empty(coords)
 
     def process_output(self, direction: int = 0) -> int:
         """
@@ -519,24 +518,39 @@ class Crossroad(BaseRoad):
         horizontal = self.n_left + self.n_right
 
         for car in self._cars:
-            hor_speed = (car.speed == speeds[2]).all() or (car.speed == speeds[4]).all()
-            vert_speed = (car.speed == speeds[1]).all() or (car.speed == speeds[3]).all()
+            hor_speed = car.speed_code == 2 or car.speed_code == 4
+            vert_speed = car.speed_code == 1 or car.speed_code == 3
             coords = car.position()
 
-            if (car.speed == speeds[2]).all() and coords[1] == 0:
+            if car.speed_code == 2 and coords[1] == 0:
                 continue
-            elif (car.speed == speeds[4]).all() and coords[1] == horizontal+1:
+            elif car.speed_code == 4 and coords[1] == horizontal+1:
                 continue
-            elif (car.speed == speeds[1]).all() and coords[0] == 0:
+            elif car.speed_code == 1 and coords[0] == 0:
                 continue
-            elif (car.speed == speeds[3]).all() and coords[0] == vertical+1:
+            elif car.speed_code == 3 and coords[0] == vertical+1:
                 continue
 
             car.move(self)
 
             next_dest = car.get_next_destination()
+
+            if coords[0] == 0 or car.coords[1] == 0 or coords[0] == self._road.shape[0] or coords[1] == self._road.shape[1]:
+                pass
             # print(hor_speed, horizontal <= next_dest < vertical + horizontal)
-            if hor_speed and horizontal <= next_dest < vertical + horizontal: # horizontal cars
+            elif car.rotate and car.counter >= MAX_WAITING_TIME:
+                if car.speed_code%2 == 0:
+                    if coords[1] < self.n_bottom + 1 and self.is_empty(coords + speeds[3]):
+                        car.set_speed(3)
+                    elif self.n_bottom < coords[1] and self.is_empty(coords + speeds[1]):
+                        car.set_speed(1)
+                elif (car.speed_code+1)%2 == 0:
+                    if coords[0] < self.n_left + 1 and self.is_empty(coords + speeds[2]):
+                        car.set_speed(2)
+                    elif self.n_left < coords[0] and self.is_empty(coords + speeds[4]):
+                        car.set_speed(4)
+                car.counter = 0
+            elif hor_speed and horizontal <= next_dest < vertical + horizontal: # horizontal cars
                 # print("1")
                 if (coords == np.array((coords[0], 1+next_dest - horizontal))).all():
                     if next_dest < vertical + self.n_bottom:  # to bottom
@@ -544,7 +558,7 @@ class Crossroad(BaseRoad):
                         # print("3")
                     else:                           # to top
                         car.set_speed(1)
-            elif vert_speed and 0 <= car.get_next_destination() < vertical + horizontal:
+            elif vert_speed and 0 <= next_dest < vertical + horizontal:
                 # print("2")
                 if (coords == np.array((1 + next_dest, coords[0]))).all():
                     if next_dest < self.n_left:
@@ -552,9 +566,14 @@ class Crossroad(BaseRoad):
                     else:
                         car.set_speed(4)
 
+
     def step(self, time_step=0):
         super(Crossroad, self).step(time_step)
         v1, v2, v3 = self._stats[-1]
         v1 -= 4
         self._stats[-1] = (v1, v2, v3)
         return self._stats[-1]
+
+    @property
+    def border(self):
+        return self._road.shape
