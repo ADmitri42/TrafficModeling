@@ -542,7 +542,7 @@ class Crossroad(BaseRoad):
             elif self.rotary_rule_2 and self._road.shape == (4, 4):
                 # print(car.id)
                 if np.random.choice((0, 1)):
-                    print(car.id)
+                    # print(car.id)
                     if (car.position() == np.array([1, 1])).all():
                         if car.speed_code == 2:
                             car.set_speed(3)
@@ -564,7 +564,7 @@ class Crossroad(BaseRoad):
                         elif car.speed_code == 4:
                             car.set_speed(1)
 
-            elif car.rotate and car.counter >= MAX_WAITING_TIME:
+            elif car.rotate and car.counter > MAX_WAITING_TIME:
                 if car.speed_code%2 == 0:
                     if coords[1] < self.n_bottom + 1 and self.is_empty(coords + speeds[3]):
                         car.set_speed(3)
