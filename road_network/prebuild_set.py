@@ -6,7 +6,7 @@ from .road_and_cars import BaseRoad, LineWLight, Line, Crossroad, Car
 
 class CrossroadAndLines:
 
-    def __init__(self, length, red, green, offset: int = 0, name="Crossroad and lines"):
+    def __init__(self, length, red, green, offset: int = 0, rotary_2: bool = False, name="Crossroad and lines"):
         lineW0 = LineWLight(length, length - 2, red, green, offset, name=name + "/LineWLight1")
         lineW1 = LineWLight(length, length - 2, red, green, offset, name=name + "/LineWLight2")
         lineW2 = LineWLight(length, length - 2, red, green, offset+(red+green)//2, name=name + "/LineWLight3")
@@ -17,7 +17,7 @@ class CrossroadAndLines:
         line2 = Line(length, name=name + "/Line3")
         line3 = Line(length, name=name + "/Line4")
 
-        self.crossroad = Crossroad(1, 1, 1, 1, name=name + "/Crossroad")
+        self.crossroad = Crossroad(1, 1, 1, 1, rotary_2 = rotary_2, name=name + "/Crossroad")
 
         #     void = VoidGenerator(.8)
 
@@ -89,11 +89,11 @@ class CrossroadAndLines:
 
 class CrossroadAndLines2x2: #(BaseRoad):
 
-    def __init__(self, length, red, green, offsets=[0, 0, 0, 0], name = "CrandLines2x2"):
-        self.crossroad1 = CrossroadAndLines(length, red, green, offsets[0], name=name + "/Crossroad1")
-        self.crossroad2 = CrossroadAndLines(length, red, green, offsets[1], name=name + "/Crossroad2")
-        self.crossroad3 = CrossroadAndLines(length, red, green, offsets[2], name=name + "/Crossroad3")
-        self.crossroad4 = CrossroadAndLines(length, red, green, offsets[3], name=name + "/Crossroad4")
+    def __init__(self, length, red, green, offsets=[0, 0, 0, 0], rotary_2: bool = False, name = "CrandLines2x2"):
+        self.crossroad1 = CrossroadAndLines(length, red, green, offsets[0], rotary_2 = rotary_2, name=name + "/Crossroad1")
+        self.crossroad2 = CrossroadAndLines(length, red, green, offsets[1], rotary_2 = rotary_2, name=name + "/Crossroad2")
+        self.crossroad3 = CrossroadAndLines(length, red, green, offsets[2], rotary_2 = rotary_2, name=name + "/Crossroad3")
+        self.crossroad4 = CrossroadAndLines(length, red, green, offsets[3], rotary_2 = rotary_2, name=name + "/Crossroad4")
 
         self.crossroad1.output_roads[1].add_output(self.crossroad2.input_roads[1], 0, 0)
         self.crossroad1.output_roads[2].add_output(self.crossroad3.input_roads[2], 0, 0)

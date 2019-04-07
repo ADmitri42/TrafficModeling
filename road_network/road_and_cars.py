@@ -403,7 +403,7 @@ class LineWLight(Line):
 
 class Crossroad(BaseRoad):
     
-    def __init__(self, n_left, n_right, n_bottom, n_top, **kwargs):
+    def __init__(self, n_left, n_right, n_bottom, n_top, rotary_2: bool = False, **kwargs):
         super(Crossroad, self).__init__((2+n_left+n_right, 2+n_top+n_bottom), name=kwargs.get("name", "crossroad"))
         self.n_left = n_left
         self.n_right = n_right
@@ -413,6 +413,7 @@ class Crossroad(BaseRoad):
         n = self.n_left + self.n_right + self.n_bottom + self.n_top
         self._outputs = [None] * n
         self._inputs = [None] * n
+        self.rotary_rule_2 = rotary_2
 
     def add_car(self, car: Car, direction: int = 0) -> int:
         """
@@ -536,8 +537,33 @@ class Crossroad(BaseRoad):
             next_dest = car.get_next_destination()
 
             if coords[0] == 0 or car.coords[1] == 0 or coords[0] == self._road.shape[0] or coords[1] == self._road.shape[1]:
-                pass
-            # print(hor_speed, horizontal <= next_dest < vertical + horizontal)
+                continue
+
+            elif self.rotary_rule_2 and self._road.shape == (4, 4):
+                # print(car.id)
+                if np.random.choice((0, 1)):
+                    print(car.id)
+                    if (car.position() == np.array([1, 1])).all():
+                        if car.speed_code == 2:
+                            car.set_speed(3)
+                        elif car.speed_code == 3:
+                            car.set_speed(2)
+                    elif (car.position() == np.array([1, 2])).all():
+                        if car.speed_code == 2:
+                            car.set_speed(1)
+                        elif car.speed_code == 1:
+                            car.set_speed(2)
+                    elif (car.position() == np.array([2, 1])).all():
+                        if car.speed_code == 3:
+                            car.set_speed(4)
+                        elif car.speed_code == 4:
+                            car.set_speed(3)
+                    elif (car.position() == np.array([2, 2])).all():
+                        if car.speed_code == 1:
+                            car.set_speed(4)
+                        elif car.speed_code == 4:
+                            car.set_speed(1)
+
             elif car.rotate and car.counter >= MAX_WAITING_TIME:
                 if car.speed_code%2 == 0:
                     if coords[1] < self.n_bottom + 1 and self.is_empty(coords + speeds[3]):
@@ -550,6 +576,7 @@ class Crossroad(BaseRoad):
                     elif self.n_left < coords[0] and self.is_empty(coords + speeds[4]):
                         car.set_speed(4)
                 car.counter = 0
+
             elif hor_speed and horizontal <= next_dest < vertical + horizontal: # horizontal cars
                 # print("1")
                 if (coords == np.array((coords[0], 1+next_dest - horizontal))).all():
@@ -558,6 +585,7 @@ class Crossroad(BaseRoad):
                         # print("3")
                     else:                           # to top
                         car.set_speed(1)
+
             elif vert_speed and 0 <= next_dest < vertical + horizontal:
                 # print("2")
                 if (coords == np.array((1 + next_dest, coords[0]))).all():
@@ -565,7 +593,6 @@ class Crossroad(BaseRoad):
                         car.set_speed(2)
                     else:
                         car.set_speed(4)
-
 
     def step(self, time_step=0):
         super(Crossroad, self).step(time_step)
