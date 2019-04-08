@@ -224,4 +224,3 @@ class CrossroadAndLines4x4:  # (BaseRoad):
             stats += np.array(road.get_stats())
 
         return stats
-    
