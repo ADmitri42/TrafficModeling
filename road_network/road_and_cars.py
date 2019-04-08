@@ -11,6 +11,36 @@ class CarManager:
 
 class RoadManager:
     roads: List = []
+    dict_road: dict = {}
+
+    @staticmethod
+    def add_road(road):
+        if RoadManager.dict_road.get(str(road)) is not None:
+            raise NameError("Name {} is taken".format(str(road)))
+        RoadManager.dict_road[str(road)] = road
+        RoadManager.roads.append(road)
+
+    @staticmethod
+    def connect_roads(road1, road2, road2_direction: int = 0, road1_direction: int = 0):
+        """
+        Direct cars from road1 to road2
+        :param road1:
+        :param road2:
+        :param road2_direction:
+        :param road1_direction:
+        :return:
+        """
+        road1.add_output(road2, road1_direction, road2_direction)
+
+    @staticmethod
+    def connect_roads_str(name_road1: str, name_road2: str, road2_direction: int = 0, road1_direction: int = 0):
+        if RoadManager.dict_road.get(name_road1) is None:
+            raise NameError("Road {} isn't exist".format(name_road1))
+        if RoadManager.dict_road.get(name_road2) is None:
+            raise NameError("Road {} isn't exist".format(name_road2))
+        road1 = RoadManager.dict_road.get(name_road1)
+        road2 = RoadManager.dict_road.get(name_road2)
+        road1.add_output(road2, road1_direction, road2_direction)
 
 
 class Car:
@@ -98,7 +128,7 @@ class BaseRoad:
         self._stats: List[Tuple] = []  # (speed, n_cells, n_cars, n_moved)
 
         self._name = name if name is not None else "road"
-        RoadManager.roads.append(self)
+        RoadManager.add_road(self)
 
     def __str__(self):
         return self._name
@@ -112,13 +142,13 @@ class BaseRoad:
 
         self._inputs[direction] = (input_road, index)
 
-    def add_output(self, output_road, direction: int = 0, index: int = 0):
+    def add_output(self, output_road, direction: int = 0, inp_road_direction: int = 0):
         # print(self, output_road, direction, index)
         if len(self._outputs) - 1 < direction:
             self._outputs.extend([None]*(direction - len(self._outputs) + 1))
 
-        output_road.add_input(self, index, direction)
-        self._outputs[direction] = (output_road, index)
+        output_road.add_input(self, inp_road_direction, direction)
+        self._outputs[direction] = (output_road, inp_road_direction)
 
     def _get_car(self, car_id: int) -> Car:
         car = list(filter(lambda x: x.id == car_id, self._cars))
@@ -230,10 +260,10 @@ class VoidGenerator(BaseRoad):
             self.p_rot = [self.p_rot]*first_n
         self.rotate = rotate_in_case
 
-    def add_output(self, output_road, direction: int = 0, index: int = 0):
+    def add_output(self, output_road, direction: int = 0, inp_road_direction: int = 0):
         direction = len(self._outputs)
-        output_road.add_input(self, index, direction)
-        self._outputs.append((output_road, index))
+        output_road.add_input(self, inp_road_direction, direction)
+        self._outputs.append((output_road, inp_road_direction))
 
     def process_output(self, direction: int = 0):
 

@@ -7,15 +7,15 @@ from .road_and_cars import BaseRoad, LineWLight, Line, Crossroad, Car
 class CrossroadAndLines:
 
     def __init__(self, length, red, green, offset: int = 0, rotary_2: bool = False, name="Crossroad and lines"):
-        lineW0 = LineWLight(length, length - 2, red, green, offset, name=name + "/LineWLight1")
-        lineW1 = LineWLight(length, length - 2, red, green, offset, name=name + "/LineWLight2")
-        lineW2 = LineWLight(length, length - 2, red, green, offset+(red+green)//2, name=name + "/LineWLight3")
-        lineW3 = LineWLight(length, length - 2, red, green, offset+(red+green)//2, name=name + "/LineWLight4")
+        lineW0 = LineWLight(length, length - 2, red, green, offset, name=name + "/LineWLight0")
+        lineW1 = LineWLight(length, length - 2, red, green, offset, name=name + "/LineWLight1")
+        lineW2 = LineWLight(length, length - 2, red, green, offset+(red+green)//2, name=name + "/LineWLight2")
+        lineW3 = LineWLight(length, length - 2, red, green, offset+(red+green)//2, name=name + "/LineWLight3")
 
-        line0 = Line(length, name=name + "/Line1")
-        line1 = Line(length, name=name + "/Line2")
-        line2 = Line(length, name=name + "/Line3")
-        line3 = Line(length, name=name + "/Line4")
+        line0 = Line(length, name=name + "/Line0")
+        line1 = Line(length, name=name + "/Line1")
+        line2 = Line(length, name=name + "/Line2")
+        line3 = Line(length, name=name + "/Line3")
 
         self.crossroad = Crossroad(1, 1, 1, 1, rotary_2 = rotary_2, name=name + "/Crossroad")
 
@@ -90,10 +90,10 @@ class CrossroadAndLines:
 class CrossroadAndLines2x2: #(BaseRoad):
 
     def __init__(self, length, red, green, offsets=[0, 0, 0, 0], rotary_2: bool = False, name = "CrandLines2x2"):
-        self.crossroad1 = CrossroadAndLines(length, red, green, offsets[0], rotary_2 = rotary_2, name=name + "/Crossroad1")
-        self.crossroad2 = CrossroadAndLines(length, red, green, offsets[1], rotary_2 = rotary_2, name=name + "/Crossroad2")
-        self.crossroad3 = CrossroadAndLines(length, red, green, offsets[2], rotary_2 = rotary_2, name=name + "/Crossroad3")
-        self.crossroad4 = CrossroadAndLines(length, red, green, offsets[3], rotary_2 = rotary_2, name=name + "/Crossroad4")
+        self.crossroad1 = CrossroadAndLines(length, red, green, offsets[0], rotary_2 = rotary_2, name=name + "/Cross0")
+        self.crossroad2 = CrossroadAndLines(length, red, green, offsets[1], rotary_2 = rotary_2, name=name + "/Cross1")
+        self.crossroad3 = CrossroadAndLines(length, red, green, offsets[2], rotary_2 = rotary_2, name=name + "/Cross2")
+        self.crossroad4 = CrossroadAndLines(length, red, green, offsets[3], rotary_2 = rotary_2, name=name + "/Cross3")
 
         self.crossroad1.output_roads[1].add_output(self.crossroad2.input_roads[1], 0, 0)
         self.crossroad1.output_roads[2].add_output(self.crossroad3.input_roads[2], 0, 0)
@@ -146,3 +146,82 @@ class CrossroadAndLines2x2: #(BaseRoad):
             stats += np.array(road.get_stats())
 
         return stats
+
+
+class CrossroadAndLines4x4:  # (BaseRoad):
+
+    def __init__(self, length, red, green, offsets=[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+                 rotary_2: bool = False, name="CrandLines2x2"):
+        self.cross1 = CrossroadAndLines2x2(length, red, green, offsets[0], rotary_2=rotary_2, name=name + "/Cross0")
+        self.cross2 = CrossroadAndLines2x2(length, red, green, offsets[1], rotary_2=rotary_2, name=name + "/Cross1")
+        self.cross3 = CrossroadAndLines2x2(length, red, green, offsets[2], rotary_2=rotary_2, name=name + "/Cross2")
+        self.cross4 = CrossroadAndLines2x2(length, red, green, offsets[3], rotary_2=rotary_2, name=name + "/Cross3")
+
+        self.cross1.crossroad2.output_roads[1].add_output(self.cross2.crossroad1.input_roads[1], 0, 0)
+        self.cross1.crossroad3.output_roads[2].add_output(self.cross3.crossroad1.input_roads[2], 0, 0)
+
+        self.cross1.crossroad4.output_roads[1].add_output(self.cross2.crossroad3.input_roads[1], 0, 0)
+        self.cross1.crossroad4.output_roads[2].add_output(self.cross3.crossroad2.input_roads[2], 0, 0)
+
+        ################################################################
+        self.cross2.crossroads[0].output_roads[0].add_output(self.cross1.crossroad2.input_roads[0], 0, 0)
+        self.cross2.crossroads[2].output_roads[0].add_output(self.cross1.crossroad4.input_roads[0], 0, 0)
+        self.cross2.crossroads[2].output_roads[2].add_output(self.cross4.crossroad1.input_roads[2], 0, 0)
+
+        self.cross2.crossroads[3].output_roads[2].add_output(self.cross4.crossroad2.input_roads[2], 0, 0)
+
+        ################################################################
+        self.cross3.crossroads[0].output_roads[3].add_output(self.cross1.crossroad3.input_roads[3], 0, 0)
+
+        self.cross3.crossroads[1].output_roads[1].add_output(self.cross4.crossroad1.input_roads[1], 0, 0)
+        self.cross3.crossroads[1].output_roads[3].add_output(self.cross1.crossroad4.input_roads[3], 0, 0)
+        self.cross3.crossroads[3].output_roads[1].add_output(self.cross4.crossroad3.input_roads[1], 0, 0)
+
+        ################################################################
+        self.cross4.crossroads[0].output_roads[0].add_output(self.cross3.crossroad2.input_roads[0], 0, 0)
+        self.cross4.crossroads[0].output_roads[3].add_output(self.cross2.crossroad3.input_roads[3], 0, 0)
+
+        self.cross4.crossroads[1].output_roads[3].add_output(self.cross2.crossroad4.input_roads[3], 0, 0)
+
+        self.cross4.crossroads[2].output_roads[0].add_output(self.cross3.crossroads[3].input_roads[0], 0, 0)
+
+        self.crossroads = [self.cross1, self.cross2, self.cross3, self.cross4]
+
+        self._history = []
+        self.shuffle = True
+
+    #     def add_car(self, car: Car, direction: int = 0):
+    #         return self.input_roads[direction].add_car(car)
+
+    def render(self):
+        cr1 = self.cross1.render()
+        cr2 = self.cross2.render()
+        cr3 = self.cross3.render()
+        cr4 = self.cross4.render()
+
+        top = np.concatenate((cr1, cr2), axis=1)
+        bottom = np.concatenate((cr3, cr4), axis=1)
+
+        return np.vstack((top, bottom))
+
+    def move_cars(self, frame=0):
+        for road in self.crossroads:
+            road.move_cars(frame)
+
+    def step(self, frame=0):
+        for road in self.crossroads:
+            road.step(frame)
+
+    def process_outputs(self, frame=0):
+        for road in self.crossroads:
+            road.process_outputs(frame)
+
+        self._history.append(self.render())
+
+    def get_stats(self):
+        stats = np.zeros((len(self._history), 4))
+        for road in self.crossroads:
+            stats += np.array(road.get_stats())
+
+        return stats
+    
