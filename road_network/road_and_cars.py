@@ -57,6 +57,7 @@ class Car:
         """
         self._hist = []
         self.counter = 0
+        self.moves = 0
         self.id = len(CarManager.all_cars)
         CarManager.all_cars.append(self)
 
@@ -107,9 +108,10 @@ class Car:
             road.set_state(self.coords + self.speed, self.id)
             self.coords += self.speed
             self.counter = 0
+            self.moves += 1
         else:
             self.counter += 1
-        self._hist.append(self.speed_code)
+        # self._hist.append(self.speed_code)
 
 
 class BaseRoad:
@@ -169,6 +171,11 @@ class BaseRoad:
         self._new_cars.append(car)
         return 1
 
+    def add_car_at_position_w_speed(self, cars: List[Car]):
+        for car in cars:
+            self.set_state(car.position(), car.id)
+            self._cars.append(car)
+
     def _remove_car(self, car_id: int):
         car = self._get_car(car_id)
         ind = list(map(lambda x: x[1], filter(lambda x: x[0].id == car_id, zip(self._cars, range(len(self._cars))))))
@@ -188,8 +195,13 @@ class BaseRoad:
     def process_outputs(self):
         return self.process_output()
 
-    def render(self):
-        return self._road.copy()
+    def render(self, moment: int = -1):
+        if moment < 0:
+            return self._road.copy()
+        elif moment < len(self._history):
+            return self._history[moment].copy()
+        else:
+            raise IndexError("No such a moment")
 
     def get_history(self, depth):
         if depth == 0:
@@ -259,11 +271,19 @@ class VoidGenerator(BaseRoad):
         if type(self.p_rot[0]) != list:
             self.p_rot = [self.p_rot]*first_n
         self.rotate = rotate_in_case
+        self.path_length = []
 
     def add_output(self, output_road, direction: int = 0, inp_road_direction: int = 0):
         direction = len(self._outputs)
         output_road.add_input(self, inp_road_direction, direction)
         self._outputs.append((output_road, inp_road_direction))
+
+    def add_car(self, car: Car, direction: int = 0) -> int:
+        # super(VoidGenerator, self).add_car(car, direction)
+        self._cars.append(car)
+        self.path_length.append(car.moves + 1)
+        car.moves = 0
+        return 1
 
     def process_output(self, direction: int = 0):
 
@@ -278,16 +298,18 @@ class VoidGenerator(BaseRoad):
             car.route = []
             for p in self.p_rot:
                 car.route.extend(np.random.choice((0, 1, 2, 3), 1, p=p).tolist())
-            car.route.extend(np.random.choice((0, 1, 2, 3), 20-len(self.p_rot)).tolist())
+            car.route.extend(np.random.choice((0, 1, 2, 3), 100-len(self.p_rot)).tolist())
 
         if self._outputs[direction][0].add_car(car, self._outputs[0][1]):
-            # print("Crec")
+            # car.moves += 1
             return 1
 
         self._cars.append(car)
         return 0
 
     def process_outputs(self):
+        # self._cars.extend(self._new_cars)
+        # self._new_cars = []
         for i in range(len(self._outputs)):
             if self._outputs[i] is None:
                 continue
@@ -322,6 +344,7 @@ class Line(BaseRoad):
         self._next_state[0, 0] = car.id
         car.set_position(self.beginning.copy())
         car.set_speed(4)
+        car.moves += 1
         return super(Line, self).add_car(car, direction)
 
     def render(self):
@@ -481,6 +504,7 @@ class Crossroad(BaseRoad):
         self.set_state(coords, car.id)
         car.set_position(coords)
         car.set_speed(speed)
+        car.moves += 1
         return super(Crossroad, self).add_car(car, direction)
     
     def is_empty(self, coords: np.ndarray):

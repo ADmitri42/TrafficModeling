@@ -40,7 +40,7 @@ class CrossroadAndLines:
     def add_car(self, car: Car, direction: int = 0):
         return self.input_roads[direction].add_car(car)
 
-    def render(self):
+    def render(self, moment: int = -1):
         renders = list(map(lambda r: r.render(), self.input_roads + self.output_roads + [self.crossroad]))
 
         top = np.concatenate((np.zeros((renders[2].shape[1], renders[1].shape[1]), dtype="int32"),
@@ -115,11 +115,11 @@ class CrossroadAndLines2x2: #(BaseRoad):
 #     def add_car(self, car: Car, direction: int = 0):
 #         return self.input_roads[direction].add_car(car)
 
-    def render(self):
-        cr1 = self.crossroad1.render()
-        cr2 = self.crossroad2.render()
-        cr3 = self.crossroad3.render()
-        cr4 = self.crossroad4.render()
+    def render(self, moment: int = -1):
+        cr1 = self.crossroad1.render(moment)
+        cr2 = self.crossroad2.render(moment)
+        cr3 = self.crossroad3.render(moment)
+        cr4 = self.crossroad4.render(moment)
 
         top = np.concatenate((cr1, cr2), axis=1)
         bottom = np.concatenate((cr3, cr4), axis=1)
@@ -193,11 +193,11 @@ class CrossroadAndLines4x4:  # (BaseRoad):
     #     def add_car(self, car: Car, direction: int = 0):
     #         return self.input_roads[direction].add_car(car)
 
-    def render(self):
-        cr1 = self.cross1.render()
-        cr2 = self.cross2.render()
-        cr3 = self.cross3.render()
-        cr4 = self.cross4.render()
+    def render(self, moment: int = -1):
+        cr1 = self.cross1.render(moment)
+        cr2 = self.cross2.render(moment)
+        cr3 = self.cross3.render(moment)
+        cr4 = self.cross4.render(moment)
 
         top = np.concatenate((cr1, cr2), axis=1)
         bottom = np.concatenate((cr3, cr4), axis=1)
